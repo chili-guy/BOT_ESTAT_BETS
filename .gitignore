@@ -1,0 +1,34 @@
+# Ambiente virtual
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Planilhas geradas
+*.xlsx
+*.xls
+premier*.xlsx
+
+# Backup
+*_backup_*.xlsx
+*backup*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
