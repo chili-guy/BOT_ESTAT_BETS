@@ -1,6 +1,16 @@
-# 🤖 BOT ESTAT BETS - Buscador de Estatísticas da Premier League
+# 🤖 BOT ESTAT BETS - Buscador de Estatísticas de Futebol
 
-Script Python para buscar automaticamente estatísticas de jogadores da Premier League do site fbref.com.
+Scripts Python para buscar automaticamente estatísticas de jogadores de múltiplas ligas europeias do site fbref.com.
+
+## 🏆 Ligas Suportadas
+
+- **Premier League** (Inglaterra) - `buscar_estatisticas.py`
+- **La Liga** (Espanha) - `buscar_estatisticas_multi_liga.py`
+- **Bundesliga** (Alemanha) - `buscar_estatisticas_multi_liga.py`
+- **Serie A** (Itália) - `buscar_estatisticas_multi_liga.py`
+- **Primeira Liga** (Portugal) - `buscar_estatisticas_multi_liga.py`
+- **Ligue 1** (França) - `buscar_estatisticas_multi_liga.py`
+- **Championship** (Inglaterra - Série B) - `buscar_estatisticas_multi_liga.py`
 
 ## 📊 Estatísticas Coletadas
 
@@ -47,11 +57,22 @@ pip install -r requirements.txt
 
 ## 📖 Como Usar
 
-### Uso Básico
+### Script 1: Premier League (`buscar_estatisticas.py`)
+
+#### Uso Básico
 
 ```bash
-# Buscar dados de um período específico
+# Buscar dados da Premier League de um período específico
 python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
+```
+
+### Script 2: Múltiplas Ligas (`buscar_estatisticas_multi_liga.py`)
+
+#### Uso Básico
+
+```bash
+# Buscar dados de qualquer liga europeia
+python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30
 ```
 
 ### Parâmetros Disponíveis
@@ -64,7 +85,7 @@ python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
 | `--limit` | Limitar número de jogos | ❌ Não | `--limit 10` |
 | `--test` | Modo teste (não salva arquivo) | ❌ Não | `--test` |
 
-### Exemplos de Uso
+### Exemplos de Uso - Premier League
 
 #### 1. Buscar dados de um mês específico
 
@@ -72,41 +93,91 @@ python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
 python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
 ```
 
-#### 2. Buscar dados de um período maior
-
-```bash
-python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-12-31
-```
-
-#### 3. Modo teste (não salva, apenas mostra resultados)
+#### 2. Modo teste (não salva, apenas mostra resultados)
 
 ```bash
 python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --test
 ```
 
-#### 4. Limitar número de jogos (útil para testes)
+#### 3. Limitar número de jogos (útil para testes)
 
 ```bash
 python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --limit 3 --test
 ```
 
-#### 5. Especificar arquivo de saída customizado
+### Exemplos de Uso - Múltiplas Ligas
+
+#### 1. La Liga (Espanha)
 
 ```bash
-python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --output minha_planilha.xlsx
+python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30
 ```
 
-#### 6. Salvar em outro diretório
+#### 2. Bundesliga (Alemanha)
 
 ```bash
-python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --output /caminho/completo/resultado.xlsx
+python buscar_estatisticas_multi_liga.py --liga bundesliga --inicio 2025-09-01 --fim 2025-09-30
+```
+
+#### 3. Serie A (Itália)
+
+```bash
+python buscar_estatisticas_multi_liga.py --liga seriea --inicio 2025-09-01 --fim 2025-09-30
+```
+
+#### 4. Primeira Liga (Portugal)
+
+```bash
+python buscar_estatisticas_multi_liga.py --liga portugal --inicio 2025-09-01 --fim 2025-09-30
+```
+
+#### 5. Ligue 1 (França)
+
+```bash
+python buscar_estatisticas_multi_liga.py --liga ligue1 --inicio 2025-09-01 --fim 2025-09-30
+```
+
+#### 6. Championship (Inglaterra Série B)
+
+```bash
+python buscar_estatisticas_multi_liga.py --liga championship --inicio 2025-09-01 --fim 2025-09-30
+```
+
+#### 7. Modo teste e limitar jogos
+
+```bash
+python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30 --limit 1 --test
 ```
 
 ### Ver Ajuda Completa
 
 ```bash
+# Premier League
 python buscar_estatisticas.py --help
+
+# Múltiplas Ligas
+python buscar_estatisticas_multi_liga.py --help
 ```
+
+## 🧪 Validação de Dados
+
+### Script de Validação Automática
+
+Teste todas as ligas de uma vez:
+
+```bash
+python validar_ligas.py
+```
+
+### Comparação com o Site
+
+Compare dados extraídos com os dados do site fbref.com:
+
+```bash
+python comparar_dados.py
+```
+
+**✅ Todos os scripts foram validados e estão funcionando corretamente!**
 
 ## 📁 Estrutura dos Dados
 
@@ -168,10 +239,14 @@ A planilha gerada contém as seguintes colunas principais:
 
 ```
 BOT_ESTAT_BETS/
-├── buscar_estatisticas.py    # Script principal
-├── requirements.txt           # Dependências Python
-├── README.md                  # Este arquivo
-└── venv/                      # Ambiente virtual (não commitado)
+├── buscar_estatisticas.py          # Script principal - Premier League
+├── buscar_estatisticas_multi_liga.py  # Script principal - Múltiplas Ligas
+├── validar_ligas.py                 # Script de validação automática
+├── comparar_dados.py                # Script de comparação com site
+├── README.md                        # Este arquivo
+├── README_MULTI_LIGA.md            # Documentação detalhada multi-liga
+├── requirements.txt                 # Dependências Python
+└── venv/                            # Ambiente virtual (não commitado)
 ```
 
 ## 🔧 Dependências
@@ -197,4 +272,11 @@ Para questões ou problemas, abra uma issue no repositório GitHub.
 
 ---
 
-**Desenvolvido com ❤️ para facilitar a coleta de estatísticas da Premier League**
+## 📚 Documentação Adicional
+
+Para mais detalhes sobre o script de múltiplas ligas, consulte:
+- `README_MULTI_LIGA.md` - Documentação completa do script multi-liga
+
+---
+
+**Desenvolvido com ❤️ para facilitar a coleta de estatísticas de futebol**
