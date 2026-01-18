@@ -46,18 +46,36 @@ class LeagueScraper:
         self.base_url = "https://fbref.com"
         
         if HAS_CLOUDSCRAPER:
-            self.session = cloudscraper.create_scraper()
+            # Usar cloudscraper com configurações otimizadas para evitar bloqueio
+            try:
+                self.session = cloudscraper.create_scraper(
+                    browser={
+                        'browser': 'chrome',
+                        'platform': 'windows',
+                        'desktop': True
+                    },
+                    delay=10
+                )
+            except:
+                # Fallback para criação simples se houver erro
+                self.session = cloudscraper.create_scraper()
         else:
             self.session = requests.Session()
         
+        # Headers mais completos e realistas para evitar bloqueio
         headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
             'Referer': 'https://www.google.com/'
         }
         
@@ -78,13 +96,82 @@ class LeagueScraper:
                 print("  ⚠️  Usando requests padrão")
             
             print("  🔄 Estabelecendo conexão...")
-            initial_response = self.session.get(self.base_url, timeout=15)
+            # Primeiro acesso com delay
+            time.sleep(2)
+            initial_response = self.session.get(self.base_url, timeout=20)
+            
             if initial_response.status_code == 200:
                 print("  ✅ Conexão estabelecida")
+            elif initial_response.status_code == 403:
+                print("  ⚠️  Erro 403 na inicialização. Tentando novamente...")
+                time.sleep(5)
+                # Atualizar referer
+                self.session.headers.update({
+                    'Referer': self.base_url,
+                    'Origin': self.base_url
+                })
+                initial_response = self.session.get(self.base_url, timeout=20)
+                if initial_response.status_code == 200:
+                    print("  ✅ Conexão estabelecida na segunda tentativa")
+                else:
+                    print(f"  ⚠️  Status: {initial_response.status_code}")
+            else:
+                print(f"  ⚠️  Status: {initial_response.status_code}")
             self._initialized = True
         except Exception as e:
             print(f"  ⚠️  Aviso na conexão: {e}")
             self._initialized = True
+    
+    def _get_with_retry(self, url, max_retries=3, timeout=20):
+        """Faz requisição com retry automático para 403"""
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    delay = min(5 * (attempt + 1), 30)  # Delays progressivos: 10s, 15s, 30s
+                    print(f"    ⏳ Tentativa {attempt + 1}/{max_retries} - Aguardando {delay}s...")
+                    time.sleep(delay)
+                    
+                    # Atualizar headers
+                    self.session.headers.update({
+                        'Referer': self.base_url,
+                        'Origin': self.base_url
+                    })
+                
+                response = self.session.get(url, timeout=timeout)
+                
+                if response.status_code == 200:
+                    return response
+                elif response.status_code == 403:
+                    if attempt < max_retries - 1:
+                        print(f"    ⚠️  Erro 403 (Forbidden) - Tentando novamente...")
+                        continue
+                    else:
+                        print(f"    ❌ Erro 403 (Forbidden) após {max_retries} tentativas")
+                        print(f"    💡 O site está bloqueando o acesso. Possíveis soluções:")
+                        print(f"       - Aguarde alguns minutos e tente novamente")
+                        print(f"       - Verifique se o cloudscraper está atualizado: pip install --upgrade cloudscraper")
+                        response.raise_for_status()
+                elif response.status_code == 429:
+                    print(f"    ⚠️  Rate limit (429). Aguardando 30 segundos...")
+                    time.sleep(30)
+                    continue
+                else:
+                    response.raise_for_status()
+                    
+            except requests.exceptions.Timeout:
+                if attempt < max_retries - 1:
+                    print(f"    ⚠️  Timeout - Tentando novamente...")
+                    continue
+                else:
+                    raise
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    print(f"    ⚠️  Erro na requisição: {e} - Tentando novamente...")
+                    continue
+                else:
+                    raise
+        
+        return None
     
     def get_player_stats_from_match(self, match_url, team, opponent, date, location):
         """Extrai estatísticas de jogadores de um jogo específico"""
@@ -93,14 +180,10 @@ class LeagueScraper:
                 return []
             
             time.sleep(3)  # Rate limiting
-            response = self.session.get(match_url, timeout=20)
+            response = self._get_with_retry(match_url, max_retries=3, timeout=20)
             
-            if response.status_code == 429:
-                print(f"    ⚠️  Rate limit (429). Aguardando 30 segundos...")
-                time.sleep(30)
-                response = self.session.get(match_url, timeout=20)
-            
-            response.raise_for_status()
+            if response is None:
+                return []
             soup = BeautifulSoup(response.content, 'html.parser')
             
             player_stats = []
@@ -625,8 +708,11 @@ def scrape_period(league_id, league_name, start_date, end_date, scraper=None, li
             url = get_season_url(league_id, year, month)
             print(f"  Acessando: {url}")
             
-            response = scraper.session.get(url, timeout=15)
-            response.raise_for_status()
+            response = scraper._get_with_retry(url, max_retries=3, timeout=20)
+            if response is None:
+                print(f"  ❌ Não foi possível acessar a URL após múltiplas tentativas")
+                continue
+            
             soup = BeautifulSoup(response.content, 'html.parser')
             
             month_stats = process_schedule_table(soup, start_date, end_date, scraper, limit_games)
