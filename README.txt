@@ -1,21 +1,37 @@
 ================================================================================
-  BOT ESTAT BETS - Buscador de Estatísticas de Futebol
+  BOT ESTAT BETS - Buscador de Estatísticas de Futebol via FotMob API
 ================================================================================
 
-Scripts Python para buscar automaticamente estatísticas de jogadores de 
-múltiplas ligas europeias do site fbref.com.
+Script Python para buscar automaticamente estatísticas detalhadas de 
+jogadores de múltiplas ligas europeias usando a FotMob API - uma alternativa 
+confiável e estável ao scraping de sites.
+
+================================================================================
+  CARACTERÍSTICAS PRINCIPAIS
+================================================================================
+
+✅ API Oficial: Utiliza a API pública do FotMob (mais estável que scraping)
+✅ Sem Bloqueios: Não sofre com proteções Cloudflare ou bloqueios 403
+✅ 7 Ligas Principais: Premier League, La Liga, Bundesliga, Serie A, 
+   Ligue 1, Primeira Liga e Championship
+✅ Estatísticas Completas: Minutes, Goals, Assists, xG, xA e SH (Total de Chutes)
+✅ Exportação Excel: Dados organizados em planilhas prontas para análise
+✅ Filtro por Período: Busque dados de qualquer intervalo de datas
+✅ Validação Automática: Scripts de teste incluídos
 
 ================================================================================
   LIGAS SUPORTADAS
 ================================================================================
 
-- Premier League (Inglaterra) - buscar_estatisticas.py
-- La Liga (Espanha) - buscar_estatisticas_multi_liga.py
-- Bundesliga (Alemanha) - buscar_estatisticas_multi_liga.py
-- Serie A (Itália) - buscar_estatisticas_multi_liga.py
-- Primeira Liga (Portugal) - buscar_estatisticas_multi_liga.py
-- Ligue 1 (França) - buscar_estatisticas_multi_liga.py
-- Championship (Inglaterra - Série B) - buscar_estatisticas_multi_liga.py
+| Liga              | Código        | País                    |
+|-------------------|---------------|-------------------------|
+| Premier League    | premier       | Inglaterra              |
+| La Liga           | laliga        | Espanha                 |
+| Bundesliga        | bundesliga    | Alemanha                |
+| Serie A           | seriea        | Itália                  |
+| Ligue 1           | ligue1        | França                  |
+| Primeira Liga     | portugal      | Portugal                |
+| Championship      | championship  | Inglaterra (Série B)    |
 
 ================================================================================
   ESTATÍSTICAS COLETADAS
@@ -23,19 +39,34 @@ múltiplas ligas europeias do site fbref.com.
 
 O script busca as seguintes informações para cada jogador em cada partida:
 
-- MINUTES: Minutos jogados
-- GOALS: Gols marcados  
-- ASSISTS: Assistências
+- MINUTES: Minutos jogados no jogo
+- GOALS: Gols marcados
+- ASSISTS: Assistências concedidas
 - xG: Expected Goals (até 4 casas decimais)
 - xA: Expected Assists (até 4 casas decimais)
+- SH: Total de chutes (shots) realizados
+
+DADOS ADICIONAIS INCLUÍDOS:
+
+- Player: Nome do jogador
+- Team: Time do jogador
+- Date: Data do jogo
+- Opponent: Time adversário
+- Location: Local do jogo (home/away)
+- Confronto: Formato "Time|Adversário|Data"
+- Year: Ano do jogo
+- Month: Mês do jogo
+- adj: Campo de ajuste (0 por padrão)
 
 ================================================================================
   INSTALAÇÃO
 ================================================================================
 
 1. PRÉ-REQUISITOS
+
    - Python 3.8 ou superior
    - pip (gerenciador de pacotes Python)
+   - Conexão com internet
 
 2. CLONAR O REPOSITÓRIO
 
@@ -57,32 +88,34 @@ O script busca as seguintes informações para cada jogador em cada partida:
 
    pip install -r requirements.txt
 
+   As dependências principais são:
+   - pandas >= 2.0.0        Manipulação de dados
+   - openpyxl >= 3.1.0      Exportação para Excel
+   - requests >= 2.31.0     Requisições HTTP
+
 ================================================================================
   COMO USAR
 ================================================================================
 
-SCRIPT 1: PREMIER LEAGUE (buscar_estatisticas.py)
-
 USO BÁSICO:
 
-   python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
+   python buscar_estatisticas_fotmob.py --liga <LIGA> --inicio <DATA_INICIO> --fim <DATA_FIM>
 
-SCRIPT 2: MÚLTIPLAS LIGAS (buscar_estatisticas_multi_liga.py)
+PARÂMETROS DISPONÍVEIS:
 
-USO BÁSICO:
-
-   python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30
-
-PARÂMETROS DISPONÍVEIS (Premier League):
+   --liga      Liga a buscar                    OBRIGATÓRIO
+               Opções: premier, laliga, bundesliga, seriea, ligue1, 
+                       portugal, championship
+               Exemplo: --liga bundesliga
 
    --inicio    Data de início (YYYY-MM-DD)      OBRIGATÓRIO
-               Exemplo: --inicio 2025-10-01
+               Exemplo: --inicio 2025-08-01
 
    --fim       Data de fim (YYYY-MM-DD)         OBRIGATÓRIO
-               Exemplo: --fim 2025-10-31
+               Exemplo: --fim 2025-08-31
 
    --output    Arquivo Excel de saída           OPCIONAL
-               Padrão: premier.xlsx
+               Padrão: {liga}_{datas}.xlsx
                Exemplo: --output resultado.xlsx
 
    --limit     Limitar número de jogos          OPCIONAL
@@ -91,138 +124,111 @@ PARÂMETROS DISPONÍVEIS (Premier League):
    --test      Modo teste (não salva arquivo)   OPCIONAL
                Exemplo: --test
 
-PARÂMETROS DISPONÍVEIS (Múltiplas Ligas):
+================================================================================
+  EXEMPLOS DE USO
+================================================================================
 
-   --liga      Liga a buscar                    OBRIGATÓRIO
-               Opções: laliga, bundesliga, seriea, portugal, ligue1, championship
-               Exemplo: --liga laliga
+1. BUSCAR DADOS DA BUNDESLIGA DE UM MÊS:
 
-   --inicio    Data de início (YYYY-MM-DD)      OBRIGATÓRIO
-               Exemplo: --inicio 2025-09-01
+   python buscar_estatisticas_fotmob.py --liga bundesliga --inicio 2025-08-01 --fim 2025-08-31
 
-   --fim       Data de fim (YYYY-MM-DD)         OBRIGATÓRIO
-               Exemplo: --fim 2025-09-30
+   Resultado: Arquivo bundesliga_2025-08-01_2025-08-31.xlsx será criado.
 
-   --output    Arquivo Excel de saída           OPCIONAL
-               Padrão: {liga}_{datas}.xlsx
-               Exemplo: --output minha_planilha.xlsx
+2. PREMIER LEAGUE COM ARQUIVO PERSONALIZADO:
 
-   --limit     Limitar número de jogos          OPCIONAL
-               Exemplo: --limit 10
+   python buscar_estatisticas_fotmob.py --liga premier --inicio 2025-09-01 --fim 2025-09-30 --output premier_setembro.xlsx
 
-   --test      Modo teste (não salva arquivo)   OPCIONAL
-               Exemplo: --test
+3. MODO TESTE (NÃO SALVA, APENAS MOSTRA RESULTADOS):
 
-EXEMPLOS DE USO - PREMIER LEAGUE:
+   python buscar_estatisticas_fotmob.py --liga laliga --inicio 2025-08-22 --fim 2025-08-24 --test
 
-1. Buscar dados de um mês específico:
-   
-   python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31
+4. LIMITAR NÚMERO DE JOGOS (ÚTIL PARA TESTES RÁPIDOS):
 
-2. Modo teste (não salva, apenas mostra resultados):
-   
-   python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --test
+   python buscar_estatisticas_fotmob.py --liga seriea --inicio 2025-08-01 --fim 2025-08-31 --limit 3 --test
 
-3. Limitar número de jogos (útil para testes):
-   
-   python buscar_estatisticas.py --inicio 2025-10-01 --fim 2025-10-31 --limit 3 --test
+5. LA LIGA (ESPANHA):
 
-EXEMPLOS DE USO - MÚLTIPLAS LIGAS:
+   python buscar_estatisticas_fotmob.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30
 
-1. La Liga (Espanha):
-   
-   python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30
+6. SERIE A (ITÁLIA):
 
-2. Bundesliga (Alemanha):
-   
-   python buscar_estatisticas_multi_liga.py --liga bundesliga --inicio 2025-09-01 --fim 2025-09-30
+   python buscar_estatisticas_fotmob.py --liga seriea --inicio 2025-09-01 --fim 2025-09-30
 
-3. Serie A (Itália):
-   
-   python buscar_estatisticas_multi_liga.py --liga seriea --inicio 2025-09-01 --fim 2025-09-30
+7. LIGUE 1 (FRANÇA):
 
-4. Primeira Liga (Portugal):
-   
-   python buscar_estatisticas_multi_liga.py --liga portugal --inicio 2025-09-01 --fim 2025-09-30
+   python buscar_estatisticas_fotmob.py --liga ligue1 --inicio 2025-09-01 --fim 2025-09-30
 
-5. Ligue 1 (França):
-   
-   python buscar_estatisticas_multi_liga.py --liga ligue1 --inicio 2025-09-01 --fim 2025-09-30
+8. PRIMEIRA LIGA (PORTUGAL):
 
-6. Championship (Inglaterra Série B):
-   
-   python buscar_estatisticas_multi_liga.py --liga championship --inicio 2025-09-01 --fim 2025-09-30
+   python buscar_estatisticas_fotmob.py --liga portugal --inicio 2025-09-01 --fim 2025-09-30
 
-7. Modo teste e limitar jogos:
-   
-   python buscar_estatisticas_multi_liga.py --liga laliga --inicio 2025-09-01 --fim 2025-09-30 --limit 1 --test
+9. CHAMPIONSHIP (INGLATERRA - SÉRIE B):
+
+   python buscar_estatisticas_fotmob.py --liga championship --inicio 2025-09-01 --fim 2025-09-30
 
 VER AJUDA COMPLETA:
 
-   python buscar_estatisticas.py --help
-   python buscar_estatisticas_multi_liga.py --help
+   python buscar_estatisticas_fotmob.py --help
 
 ================================================================================
-  VALIDAÇÃO DE DADOS
+  ESTRUTURA DOS DADOS DE SAÍDA
 ================================================================================
 
-SCRIPT DE VALIDAÇÃO AUTOMÁTICA:
+A planilha Excel gerada contém as seguintes colunas:
 
-   python validar_ligas.py
-
-Este script testa todas as ligas automaticamente para garantir que estão 
-funcionando corretamente.
-
-COMPARAÇÃO COM O SITE:
-
-   python comparar_dados.py
-
-Este script compara os dados extraídos com os dados do site fbref.com para 
-garantir precisão.
-
-TODOS OS SCRIPTS FORAM VALIDADOS E ESTÃO FUNCIONANDO CORRETAMENTE!
-
-================================================================================
-  ESTRUTURA DOS DADOS
-================================================================================
-
-A planilha gerada contém as seguintes colunas principais:
-
-- Player: Nome do jogador
-- Team: Time do jogador
-- Date: Data do jogo
+- Player: Nome completo do jogador
+- Team: Nome do time
+- Date: Data do jogo (YYYY-MM-DD)
 - Opponent: Time adversário
 - Minutes: Minutos jogados
 - Goals: Gols marcados
 - Assists: Assistências
 - xG: Expected Goals (4 casas decimais)
 - xA: Expected Assists (4 casas decimais)
+- SH: Total de chutes realizados
 - Confronto: Formato "Time|Adversário|Data"
-- Location: Local do jogo (home/away)
+- Location: "home" ou "away"
 - Year: Ano do jogo
-- Month: Mês do jogo
+- Month: Mês do jogo (1-12)
+- adj: Campo de ajuste (0 por padrão)
 
 ================================================================================
   FUNCIONAMENTO
 ================================================================================
 
-1. O script acessa o site fbref.com
-2. Busca os jogos no período especificado
-3. Para cada jogo, extrai estatísticas de todos os jogadores (ambos os times)
-4. Filtra automaticamente linhas de subtotal/agregado (990 minutos)
-5. Remove duplicatas automaticamente
-6. Ordena por data
-7. Salva na planilha Excel especificada
+1. Acesso à API: O script faz requisições para a API pública do FotMob
+2. Busca de Jogos: Filtra os jogos da liga selecionada no período especificado
+3. Extração de Dados: Para cada jogo, extrai estatísticas de todos os 
+   jogadores (ambos os times)
+4. Filtragem: Remove automaticamente jogadores que não jogaram (0 minutos)
+5. Remoção de Duplicatas: Remove registros duplicados automaticamente
+6. Ordenação: Ordena os dados por data
+7. Exportação: Salva tudo em uma planilha Excel organizada
+
+================================================================================
+  VALIDAÇÃO E TESTES
+================================================================================
+
+VALIDAR EXTRAÇÃO DE DADOS:
+
+   python buscar_estatisticas_fotmob.py --liga bundesliga --inicio 2025-08-22 --fim 2025-08-24 --limit 3 --test
+
+TESTAR TODAS AS LIGAS:
+
+   Execute uma extração rápida para cada liga usando o modo --limit 1 --test
 
 ================================================================================
   IMPORTANTE
 ================================================================================
 
-- Rate Limiting: O script inclui pausas entre requisições para respeitar o site
-- Dados Disponíveis: Só busca dados de jogos já jogados (com placar)
-- Jogos Futuros: Jogos que ainda não foram jogados são automaticamente pulados
-- Estrutura do Site: Se o fbref.com mudar sua estrutura HTML, o script pode 
-  precisar de ajustes
+- Rate Limiting: O script inclui pausas de 1 segundo entre requisições para 
+  respeitar a API
+- Dados Disponíveis: Só busca dados de jogos já finalizados (com estatísticas 
+  disponíveis)
+- Período de Dados: A API do FotMob mantém dados históricos extensos
+- Timezone: As datas são salvas sem timezone para compatibilidade com Excel
+- Duplicatas: O script remove automaticamente registros duplicados baseado em 
+  Player, Team, Date e Opponent
 
 ================================================================================
   SOLUÇÃO DE PROBLEMAS
@@ -230,49 +236,91 @@ A planilha gerada contém as seguintes colunas principais:
 
 O SCRIPT NÃO ENCONTRA DADOS:
 
-1. Verifique sua conexão com a internet
-2. Verifique se os dados estão disponíveis no site fbref.com
-3. Use --test para ver o que está sendo encontrado
-4. Use --limit 1 para testar com apenas 1 jogo
+1. Verifique a conexão com a internet
+   ping www.fotmob.com
 
-ERRO AO SALVAR ARQUIVO:
+2. Verifique se existem jogos no período
+   - Use --test para ver o que está sendo encontrado
+   - Use --limit 1 para testar com apenas 1 jogo
 
-- Verifique se tem permissão de escrita no diretório
-- Verifique se o caminho do arquivo está correto
-- Se usar caminho absoluto, certifique-se de que o diretório existe 
-  (ou será criado automaticamente)
+3. Verifique o código da liga
+   python buscar_estatisticas_fotmob.py --help
 
-RATE LIMIT (429):
+ERRO AO SALVAR ARQUIVO EXCEL:
 
-- O script aguarda automaticamente quando recebe rate limit
-- Aguarde alguns minutos e tente novamente
-- Considere usar --limit para processar menos jogos por vez
+- Verifique permissões: Certifique-se de ter permissão de escrita no diretório
+- Verifique o caminho: Se usar caminho absoluto, certifique-se de que o 
+  diretório existe
+- Arquivo aberto: Feche o arquivo Excel se estiver aberto em outro programa
+
+ERRO DE CONEXÃO COM API:
+
+- Timeout: Aguarde alguns segundos e tente novamente
+- API indisponível: Verifique o status do site FotMob em 
+  https://www.fotmob.com
+- Firewall: Verifique se seu firewall não está bloqueando requisições HTTPS
+
+DADOS PARECEM INCORRETOS:
+
+- Validação: Compare alguns registros com o site FotMob manualmente
+- Timezone: Verifique se as datas estão corretas (podem variar por timezone)
+- Jogos cancelados: Alguns jogos podem ter sido cancelados ou adiados
 
 ================================================================================
   ESTRUTURA DO PROJETO
 ================================================================================
 
 BOT_ESTAT_BETS/
-├── buscar_estatisticas.py          Script principal - Premier League
-├── buscar_estatisticas_multi_liga.py  Script principal - Múltiplas Ligas
-├── validar_ligas.py                 Script de validação automática
-├── comparar_dados.py                Script de comparação com site
-├── README.txt                       Este arquivo
-├── README.md                        Documentação em Markdown
-├── README_MULTI_LIGA.md            Documentação detalhada multi-liga
-├── requirements.txt                 Dependências Python
+├── buscar_estatisticas_fotmob.py    Script principal - Bot FotMob
+├── buscar_estatisticas_multi_liga.py Script alternativo (FBref)
+├── buscar_estatisticas.py            Script antigo Premier League (FBref)
+├── validar_acesso.py                 Script para validar acesso a sites
+├── testar_alternativas.py            Script para testar fontes alternativas
+├── validar_ligas.py                  Script de validação automática
+├── comparar_dados.py                 Script de comparação com site
+├── README.md                         Documentação principal (Markdown)
+├── README.txt                        Este arquivo (texto)
+├── VALIDACAO_FOTMOB.md              Documentação de validação
+├── SOLUCAO_403.md                   Documentação sobre problemas 403
+├── requirements.txt                  Dependências Python
 └── venv/                            Ambiente virtual (não commitado)
 
 ================================================================================
   DEPENDÊNCIAS
 ================================================================================
 
-- pandas >= 2.0.0
-- openpyxl >= 3.1.0
-- requests >= 2.31.0
-- beautifulsoup4 >= 4.12.0
-- lxml >= 4.9.0
-- cloudscraper >= 1.2.0
+Todas as dependências estão listadas em requirements.txt:
+
+pandas>=2.0.0          # Manipulação de dados
+openpyxl>=3.1.0        # Exportação para Excel
+requests>=2.31.0       # Requisições HTTP
+
+NOTA: Este bot usa apenas requests para acessar a API do FotMob. Não são 
+necessárias bibliotecas de scraping como beautifulsoup4 ou cloudscraper, 
+tornando-o mais leve e confiável.
+
+================================================================================
+  COMPARAÇÃO COM VERSÃO FBREF
+================================================================================
+
+Característica       FotMob (Atual)        FBref (Legado)
+-------------------  -------------------   -------------------
+Método               API oficial           Web scraping
+Estabilidade         ✅ Alta               ⚠️ Bloqueios frequentes
+Cloudflare           ✅ Não aplicável      ❌ Problemas constantes
+Velocidade           ✅ Rápido             ⚠️ Depende de delays
+Manutenção           ✅ Baixa necessidade  ⚠️ Requer ajustes frequentes
+Estatísticas SH      ✅ Disponível         ⚠️ Pode variar
+
+RECOMENDAÇÃO: Use buscar_estatisticas_fotmob.py como solução principal.
+
+================================================================================
+  DOCUMENTAÇÃO ADICIONAL
+================================================================================
+
+- VALIDACAO_FOTMOB.md: Documentação detalhada da validação realizada
+- SOLUCAO_403.md: Soluções para problemas de bloqueio (FBref)
+- README.md: Versão Markdown completa da documentação
 
 ================================================================================
   LICENÇA
@@ -284,22 +332,37 @@ Este projeto é open source e está disponível para uso livre.
   CONTRIBUINDO
 ================================================================================
 
-Contribuições são bem-vindas! Sinta-se livre para abrir issues ou pull requests.
+Contribuições são bem-vindas! Sinta-se livre para:
+
+- Abrir issues para reportar bugs ou sugerir melhorias
+- Enviar pull requests com correções ou novas funcionalidades
+- Melhorar a documentação
 
 ================================================================================
   SUPORTE
 ================================================================================
 
-Para questões ou problemas, abra uma issue no repositório GitHub:
-https://github.com/chili-guy/BOT_ESTAT_BETS
+Para questões ou problemas:
+
+1. Verifique a documentação: Leia este README e a seção de solução de problemas
+2. Abra uma issue: https://github.com/chili-guy/BOT_ESTAT_BETS/issues
+3. Teste com --test: Use o modo teste para diagnóstico
+
+================================================================================
+  STATUS DO PROJETO
+================================================================================
+
+✅ API FotMob: Funcionando perfeitamente
+✅ Todas as ligas: Validadas e operacionais
+✅ Todas as estatísticas: Incluindo SH (chutes)
+✅ Exportação Excel: Funcionando corretamente
+✅ Validação: Testes automatizados incluídos
 
 ================================================================================
 
 Desenvolvido com ❤️ para facilitar a coleta de estatísticas de futebol
 
-Para mais detalhes sobre o script de múltiplas ligas, consulte README_MULTI_LIGA.md
+Versão: 2.0 (FotMob API)
+Última atualização: Janeiro 2025
 
 ================================================================================
-
-
-
