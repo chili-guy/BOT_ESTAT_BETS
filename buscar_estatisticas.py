@@ -262,6 +262,7 @@ class PremierLeagueScraper:
                 xg = 0.0
                 xa = 0.0
                 
+                # Primeiro loop: buscar todos os valores básicos
                 for cell in cells:
                     data_stat = cell.get('data-stat', '').lower()
                     text = cell.get_text(strip=True)
@@ -295,9 +296,18 @@ class PremierLeagueScraper:
                                 xg = 0.0
                         except (ValueError, AttributeError):
                             xg = 0.0
-                    elif data_stat in ['xa', 'xag', 'xg_assist', 'expected_assists', 'x_assisted_goals']:
+                
+                # Buscar xA APENAS usando xg_assist (nome correto no fbref)
+                # NÃO usar fallbacks que podem pegar valores errados
+                xa = 0.0
+                for cell in cells:
+                    data_stat = cell.get('data-stat', '').lower()
+                    
+                    # APENAS usar xg_assist - método mais confiável
+                    if data_stat == 'xg_assist':
                         try:
-                            # Converter vírgula para ponto (formato brasileiro/europeu)
+                            text = cell.get_text(strip=True)
+                            # Converter vírgula para ponto
                             text_clean = text.replace(',', '.')
                             # Remover tudo exceto dígitos e ponto
                             text_clean = re.sub(r'[^\d.]', '', text_clean)
@@ -305,21 +315,10 @@ class PremierLeagueScraper:
                                 xa = float(text_clean)
                             else:
                                 xa = 0.0
-                        except (ValueError, AttributeError):
+                            break  # Parar assim que encontrar (só existe uma célula xg_assist)
+                        except (ValueError, AttributeError, TypeError):
                             xa = 0.0
-                    # Também verificar se contém "xa" ou "xag" ou "xg_assist" no nome
-                    elif ('xa' in data_stat or 'xag' in data_stat or 'xg_assist' in data_stat) and xa == 0.0:
-                        # Evitar pegar xG quando procura xA
-                        if 'xg' in data_stat and 'assist' not in data_stat and 'xa' not in data_stat:
-                            pass
-                        else:
-                            try:
-                                text_clean = text.replace(',', '.')
-                                text_clean = re.sub(r'[^\d.]', '', text_clean)
-                                if text_clean:
-                                    xa = float(text_clean)
-                            except (ValueError, AttributeError):
-                                pass
+                            break
                 
                 # Fallback: se não encontrou por data-stat, tentar por posição
                 if not player_name and len(cells) > 0:
@@ -351,7 +350,8 @@ class PremierLeagueScraper:
                 if is_subtotal:
                     continue
                 
-                # Se não encontrou estatísticas, tentar por índice no cabeçalho
+                # Fallback: Se não encontrou estatísticas básicas, tentar por índice no cabeçalho
+                # MAS NÃO buscar xA por índice - xA já foi buscado usando xg_assist acima
                 if minutes == 0 and goals == 0 and assists == 0:
                     header_row = stats_table.find('thead')
                     if header_row:
@@ -361,33 +361,6 @@ class PremierLeagueScraper:
                             gls_idx = next((i for i, h in enumerate(headers) if 'gls' in h.lower() or h.lower() == 'g'), -1)
                             ast_idx = next((i for i, h in enumerate(headers) if 'ast' in h.lower() or h.lower() == 'a'), -1)
                             xg_idx = next((i for i, h in enumerate(headers) if 'xg' in h.lower() and 'xag' not in h.lower()), -1)
-                            # Tentar múltiplas variações para xA (incluindo xg_assist)
-                            xa_idx = -1
-                            for i, h in enumerate(headers):
-                                h_lower = h.lower()
-                                # Buscar por xAG, xA, xg_assist
-                                if 'xag' in h_lower or 'xa' in h_lower:
-                                    # Mas não pegar xG sozinho
-                                    if 'xg_assist' in h_lower or 'xag' in h_lower or ('xa' in h_lower and 'xg' not in h_lower):
-                                        xa_idx = i
-                                        break
-                                elif 'xg_assist' in h_lower:
-                                    xa_idx = i
-                                    break
-                                elif 'expected_assists' in h_lower or 'expected assists' in h_lower:
-                                    xa_idx = i
-                                    break
-                            
-                            # Buscar também por data-stat nas células do cabeçalho
-                            if xa_idx == -1:
-                                header_row = stats_table.find('thead')
-                                if header_row:
-                                    header_cells = header_row.find_all(['th', 'td'])
-                                    for i, header_cell in enumerate(header_cells):
-                                        header_data_stat = header_cell.get('data-stat', '').lower()
-                                        if header_data_stat in ['xg_assist', 'xag', 'xa'] or 'xg_assist' in header_data_stat:
-                                            xa_idx = i
-                                            break
                             
                             if min_idx >= 0 and min_idx < len(cells):
                                 minutes_str = cells[min_idx].get_text(strip=True)
@@ -412,147 +385,18 @@ class PremierLeagueScraper:
                                 except (ValueError, AttributeError):
                                     xg = 0.0
                             
-                            if xa_idx >= 0 and xa_idx < len(cells):
-                                xa_str = cells[xa_idx].get_text(strip=True)
-                                try:
-                                    # Converter vírgula para ponto (formato brasileiro/europeu)
-                                    xa_str_clean = xa_str.replace(',', '.')
-                                    xa_str_clean = re.sub(r'[^\d.]', '', xa_str_clean)
-                                    if xa_str_clean:
-                                        xa = float(xa_str_clean)
-                                    else:
-                                        xa = 0.0
-                                except (ValueError, AttributeError):
-                                    xa = 0.0
-                            # Se ainda não encontrou xA, tentar buscar em todas as células por data-stat
-                            if xa == 0.0:
-                                for idx, cell in enumerate(cells):
-                                    cell_data_stat = cell.get('data-stat', '').lower()
-                                    # Buscar variações de xA (xa, xag, expected_assists)
-                                    if any(xa_variant in cell_data_stat for xa_variant in ['xa', 'xag', 'expected_assists']) and 'xg' not in cell_data_stat:
-                                        try:
-                                            xa_text = cell.get_text(strip=True)
-                                            if xa_text and xa_text.strip():
-                                                xa_text_clean = xa_text.replace(',', '.')
-                                                xa_text_clean = re.sub(r'[^\d.]', '', xa_text_clean)
-                                                if xa_text_clean:
-                                                    xa = float(xa_text_clean)
-                                                    break
-                                        except (ValueError, AttributeError):
-                                            pass
+                            # xA NÃO é buscado aqui - já foi buscado usando xg_assist no loop acima
+                            # Isso garante que sempre usamos o valor correto de xg_assist
                         except (ValueError, IndexError):
                             pass
                 
-                # Se ainda não encontrou xA após tudo, tentar métodos alternativos
-                if xa == 0.0:
-                    # Método 1: Buscar por data-stat em todas as células (incluindo xg_assist)
-                    for cell in cells:
-                        cell_data_stat = cell.get('data-stat', '').lower()
-                        # Buscar por xg_assist, xag, xa
-                        if any(xa_variant in cell_data_stat for xa_variant in ['xg_assist', 'xag', 'xa', 'expected_assists', 'assisted_goals']):
-                            # Evitar pegar xG quando procura xA
-                            if 'xg_assist' in cell_data_stat or 'xag' in cell_data_stat or ('xa' in cell_data_stat and 'xg' not in cell_data_stat):
-                                try:
-                                    cell_text = cell.get_text(strip=True)
-                                    if cell_text and cell_text.strip() and cell_text != '-':
-                                        cell_text_clean = cell_text.replace(',', '.')
-                                        cell_text_clean = re.sub(r'[^\d.]', '', cell_text_clean)
-                                        if cell_text_clean:
-                                            xa = float(cell_text_clean)
-                                            break
-                                except (ValueError, AttributeError):
-                                    pass
-                    
-                    # Método 2: Se xG foi encontrado, xA geralmente está logo depois (próxima coluna)
-                    if xa == 0.0 and xg > 0.0:
-                        # Encontrar índice de xG e procurar próxima célula
-                        for idx, cell in enumerate(cells):
-                            cell_data_stat = cell.get('data-stat', '').lower()
-                            if 'xg' in cell_data_stat and 'xa' not in cell_data_stat:
-                                # Procurar nas próximas 3 células após xG
-                                for next_idx in range(idx + 1, min(idx + 4, len(cells))):
-                                    next_cell = cells[next_idx]
-                                    next_data_stat = next_cell.get('data-stat', '').lower()
-                                    next_text = next_cell.get_text(strip=True)
-                                    # Se não é numérico válido, pode ser xA
-                                    if next_text and next_text != '-':
-                                        try:
-                                            next_text_clean = next_text.replace(',', '.')
-                                            next_text_clean = re.sub(r'[^\d.]', '', next_text_clean)
-                                            if next_text_clean:
-                                                potential_xa = float(next_text_clean)
-                                                # xA geralmente é menor que 1.5, então se for um número pequeno, pode ser xA
-                                                if potential_xa < 1.5 and potential_xa >= 0:
-                                                    # Verificar se não é outro campo conhecido
-                                                    if next_data_stat not in ['xg', 'goals', 'assists', 'minutes', 'player']:
-                                                        xa = potential_xa
-                                                        break
-                                        except (ValueError, AttributeError):
-                                            pass
-                                if xa > 0.0:
-                                    break
-                    
-                    # Método 3: Buscar por posição relativa (se assists foi encontrado, xA pode estar perto)
-                    if xa == 0.0 and assists >= 0:
-                        # Buscar células próximas a assists
-                        for idx, cell in enumerate(cells):
-                            cell_data_stat = cell.get('data-stat', '').lower()
-                            if 'assists' in cell_data_stat:
-                                # Procurar próxima célula numérica
-                                for next_idx in range(idx + 1, min(idx + 3, len(cells))):
-                                    next_cell = cells[next_idx]
-                                    next_text = next_cell.get_text(strip=True)
-                                    next_data_stat = next_cell.get('data-stat', '').lower()
-                                    if next_text and next_text != '-':
-                                        try:
-                                            next_text_clean = next_text.replace(',', '.')
-                                            next_text_clean = re.sub(r'[^\d.]', '', next_text_clean)
-                                            if next_text_clean:
-                                                potential_xa = float(next_text_clean)
-                                                if potential_xa < 2.0 and potential_xa >= 0 and 'xa' not in next_data_stat and 'xg' not in next_data_stat:
-                                                    # Se parece ser um valor decimal pequeno, pode ser xA
-                                                    if '.' in next_text or ',' in next_text:
-                                                        xa = potential_xa
-                                                        break
-                                        except (ValueError, AttributeError):
-                                            pass
-                                if xa > 0.0:
-                                    break
-                    
-                    # Método 4: Se ainda não encontrou, buscar em todas as células novamente com xg_assist
-                    if xa == 0.0:
-                        for cell in cells:
-                            cell_data_stat = cell.get('data-stat', '').lower()
-                            # Buscar especificamente por xg_assist (que é o nome correto no fbref)
-                            if cell_data_stat == 'xg_assist':
-                                try:
-                                    cell_text = cell.get_text(strip=True)
-                                    if cell_text and cell_text.strip() and cell_text != '-':
-                                        cell_text_clean = cell_text.replace(',', '.')
-                                        cell_text_clean = re.sub(r'[^\d.]', '', cell_text_clean)
-                                        if cell_text_clean:
-                                            xa = float(cell_text_clean)
-                                            break
-                                except (ValueError, AttributeError):
-                                    pass
-                    
-                    # Debug apenas se necessário (comentado para produção)
-                    # if xa == 0.0 and not first_row_processed:
-                    #     print(f"    🔍 DEBUG xA: Player={player_name[:20]}, xG={xg}, Assists={assists}")
-                    #     print(f"    🔍 DEBUG: Procurando xA em todas as células:")
-                    #     for idx, cell in enumerate(cells):  # Todas as células
-                    #         cell_stat = cell.get('data-stat', 'N/A')
-                    #         cell_text = cell.get_text(strip=True)[:30]
-                    #         # Destacar se tem xg_assist
-                    #         if 'xg_assist' in cell_stat.lower() or 'xag' in cell_stat.lower():
-                    #             print(f"        [{idx}] ⭐ data-stat='{cell_stat}' text='{cell_text}' ⭐")
-                    #         else:
-                    #             print(f"        [{idx}] data-stat='{cell_stat}' text='{cell_text}'")
-                    #     first_row_processed = True
+                # xA já foi extraído usando xg_assist no loop acima
+                # NÃO usar métodos alternativos/fallbacks que podem pegar valores errados
+                # Se xa == 0.0, pode ser que realmente seja 0
                 
-                # Format xG com 4 casas decimais
-                xg_formatted = round(xg, 4) if xg > 0 else 0.0
-                xa_formatted = round(xa, 4) if xa > 0 else 0.0
+                # Format xG e xA com 4 casas decimais (garantir que sempre mostra 4 decimais)
+                xg_formatted = round(float(xg), 4) if xg > 0 else 0.0000
+                xa_formatted = round(float(xa), 4) if xa > 0 else 0.0000
                 
                 # Criar registro
                 stats = {
@@ -1086,12 +930,62 @@ Exemplos:
         # Salvar planilha
         import os
         from pathlib import Path
+        from openpyxl import load_workbook
+        from openpyxl.styles import NamedStyle
         
         # Criar diretório se não existir
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
+        # Salvar DataFrame no Excel
         new_df.to_excel(args.output, index=False)
+        
+        # Formatar colunas xG e xA com 4 casas decimais
+        try:
+            wb = load_workbook(args.output)
+            ws = wb.active
+            
+            # Encontrar índices das colunas xG e xA
+            header_row = 1
+            xg_col = None
+            xa_col = None
+            
+            for col_idx, cell in enumerate(ws[header_row], 1):
+                if cell.value == 'xG':
+                    xg_col = col_idx
+                elif cell.value == 'xA':
+                    xa_col = col_idx
+            
+            # Aplicar formatação de 4 casas decimais
+            from openpyxl.styles import NamedStyle
+            decimal_style = NamedStyle(name="decimal4", number_format="0.0000")
+            
+            if xg_col:
+                for row in range(2, ws.max_row + 1):
+                    cell = ws.cell(row=row, column=xg_col)
+                    if cell.value is not None:
+                        try:
+                            cell.value = float(cell.value)
+                            cell.number_format = "0.0000"
+                        except (ValueError, TypeError):
+                            pass
+            
+            if xa_col:
+                for row in range(2, ws.max_row + 1):
+                    cell = ws.cell(row=row, column=xa_col)
+                    if cell.value is not None:
+                        try:
+                            cell.value = float(cell.value)
+                            cell.number_format = "0.0000"
+                        except (ValueError, TypeError):
+                            pass
+            
+            # Salvar workbook
+            wb.save(args.output)
+            wb.close()
+        except Exception as e:
+            print(f"  ⚠️  Aviso: Não foi possível formatar decimais: {e}")
+            print(f"  💡 Os valores serão salvos, mas podem não mostrar 4 casas decimais fixas")
         
         print(f"\n{'='*60}")
         print("✅ PLANILHA SALVA COM SUCESSO!")

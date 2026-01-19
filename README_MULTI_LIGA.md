@@ -182,3 +182,4 @@ O script gera um arquivo Excel com todas as estatísticas encontradas. Os valore
 
 **Desenvolvido para extrair dados de fbref.com**
 
+
