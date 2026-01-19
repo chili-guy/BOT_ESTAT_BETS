@@ -113,6 +113,7 @@ class FotMobScraper:
             assists = 0
             xg = 0.0
             xa = 0.0
+            shots = 0  # SH - Total shots (chutes)
             
             # Extrair do array stats
             if 'stats' in player_data and isinstance(player_data['stats'], list):
@@ -153,6 +154,11 @@ class FotMobScraper:
                                             xa = float(value)
                                         except:
                                             xa = 0.0
+                                    elif ('total shot' in key_lower or 'shot' == key_lower) and 'on target' not in key_lower and 'shotmap' not in key_lower:
+                                        try:
+                                            shots = int(float(value))
+                                        except:
+                                            shots = 0
             
             # Filtrar jogadores sem minutos (não jogaram)
             if minutes == 0:
@@ -174,6 +180,7 @@ class FotMobScraper:
                 'Assists': assists,
                 'xG': round(xg, 4) if xg else 0.0,
                 'xA': round(xa, 4) if xa else 0.0,
+                'SH': shots,  # Total shots (chutes)
                 'Confronto': f"{team_name}|{opponent}|{match_date_naive.strftime('%Y-%m-%d')}",
                 'Location': location,
                 'Year': match_date_naive.year,
@@ -278,7 +285,7 @@ def scrape_league_period(league_key, start_date, end_date, scraper, limit_games=
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Busca estatísticas usando FotMob API (MINUTES, GOALS, ASSISTS, XG, XA)',
+        description='Busca estatísticas usando FotMob API (MINUTES, GOALS, ASSISTS, XG, XA, SH)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Ligas disponíveis:
