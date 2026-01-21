@@ -115,6 +115,11 @@ class FotMobScraper:
             xa = 0.0
             shots = 0  # SH - Total shots (chutes)
             
+            # Flags para identificar goleiros
+            has_goalkeeper_stats = False
+            has_saves = False
+            has_goals_conceded = False
+            
             # Extrair do array stats
             if 'stats' in player_data and isinstance(player_data['stats'], list):
                 for stat_group in player_data['stats']:
@@ -129,12 +134,22 @@ class FotMobScraper:
                                     value = stat_info['value']
                                     key_lower = stat_key.lower()
                                     
+                                    # Identificar estatísticas de goleiro
+                                    if 'save' in key_lower and 'accurate' not in key_lower:
+                                        has_saves = True
+                                        has_goalkeeper_stats = True
+                                    elif 'goal' in key_lower and 'conceded' in key_lower:
+                                        has_goals_conceded = True
+                                        has_goalkeeper_stats = True
+                                    elif 'goalkeeper' in key_lower or 'gk' in key_lower:
+                                        has_goalkeeper_stats = True
+                                    
                                     if 'minute' in key_lower:
                                         try:
                                             minutes = int(float(value))
                                         except:
                                             minutes = 0
-                                    elif 'goal' in key_lower and 'xg' not in key_lower and 'expected' not in key_lower:
+                                    elif 'goal' in key_lower and 'xg' not in key_lower and 'expected' not in key_lower and 'conceded' not in key_lower:
                                         try:
                                             goals = int(float(value))
                                         except:
@@ -144,8 +159,13 @@ class FotMobScraper:
                                             assists = int(float(value))
                                         except:
                                             assists = 0
-                                    elif ('xg' in key_lower or 'expectedgoal' in key_lower) and 'prevented' not in key_lower and 'save' not in key_lower and 'defensive' not in key_lower:
-                                        # Filtrar "xg prevented", "expected goals saved" e outras estatísticas defensivas
+                                    elif ('xg' in key_lower or 'expectedgoal' in key_lower) and \
+                                         'prevented' not in key_lower and \
+                                         'save' not in key_lower and \
+                                         'defensive' not in key_lower and \
+                                         'xgot' not in key_lower and \
+                                         'faced' not in key_lower:
+                                        # Filtrar "xg prevented", "xgot faced", "expected goals saved" e outras estatísticas defensivas
                                         # Apenas capturar xG ofensivo (chances criadas pelo jogador)
                                         try:
                                             xg = float(value)
@@ -167,18 +187,20 @@ class FotMobScraper:
                 continue
             
             # Filtrar xG evitado de goleiros
-            # Goleiros não devem ter xG ofensivo, apenas xG evitado (que não é o que queremos)
-            # Se jogador tem 0 gols, 0 assists, 0 chutes mas xG > 0, 
-            # provavelmente é xG evitado (goleiro), não xG ofensivo
-            # MAS: se tiver chutes > 0, mantém o xG (é jogador de campo que teve chances)
-            if xg > 0 and shots == 0:
+            # Goleiros não devem ter xG ofensivo, apenas xGOT faced ou xG evitado (que não é o que queremos)
+            # Se o jogador tem estatísticas de goleiro (saves, goals conceded), zerar xG completamente
+            if has_goalkeeper_stats:
+                # É definitivamente um goleiro: zerar xG (xGOT faced ou xG evitado não conta como xG ofensivo)
+                xg = 0.0
+            elif xg > 0 and shots == 0:
+                # Pode ser um goleiro não identificado ou erro nos dados
                 # Verificar se há informação de posição
                 position = player_data.get('role', {}).get('displayName', '') if isinstance(player_data.get('role'), dict) else ''
                 position_lower = position.lower() if position else ''
                 
                 # Se for goleiro ou não tiver posição mas tem o padrão típico de goleiro (sem chutes), zerar xG
                 if 'gk' in position_lower or 'goalkeeper' in position_lower or 'goalie' in position_lower:
-                    # É goleiro: zerar xG (xG evitado não conta como xG ofensivo)
+                    # É goleiro: zerar xG
                     xg = 0.0
                 elif goals == 0 and assists == 0:
                     # Não é goleiro explicitamente, mas não tem chutes, gols nem assists
