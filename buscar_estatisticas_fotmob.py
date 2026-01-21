@@ -144,7 +144,9 @@ class FotMobScraper:
                                             assists = int(float(value))
                                         except:
                                             assists = 0
-                                    elif 'xg' in key_lower or 'expectedgoal' in key_lower:
+                                    elif ('xg' in key_lower or 'expectedgoal' in key_lower) and 'prevented' not in key_lower and 'save' not in key_lower and 'defensive' not in key_lower:
+                                        # Filtrar "xg prevented", "expected goals saved" e outras estatísticas defensivas
+                                        # Apenas capturar xG ofensivo (chances criadas pelo jogador)
                                         try:
                                             xg = float(value)
                                         except:
@@ -163,6 +165,28 @@ class FotMobScraper:
             # Filtrar jogadores sem minutos (não jogaram)
             if minutes == 0:
                 continue
+            
+            # Filtrar xG evitado de goleiros
+            # Goleiros não devem ter xG ofensivo, apenas xG evitado (que não é o que queremos)
+            # Se jogador tem 0 gols, 0 assists, 0 chutes mas xG > 0, 
+            # provavelmente é xG evitado (goleiro), não xG ofensivo
+            # MAS: se tiver chutes > 0, mantém o xG (é jogador de campo que teve chances)
+            if xg > 0 and shots == 0:
+                # Verificar se há informação de posição
+                position = player_data.get('role', {}).get('displayName', '') if isinstance(player_data.get('role'), dict) else ''
+                position_lower = position.lower() if position else ''
+                
+                # Se for goleiro ou não tiver posição mas tem o padrão típico de goleiro (sem chutes), zerar xG
+                if 'gk' in position_lower or 'goalkeeper' in position_lower or 'goalie' in position_lower:
+                    # É goleiro: zerar xG (xG evitado não conta como xG ofensivo)
+                    xg = 0.0
+                elif goals == 0 and assists == 0:
+                    # Não é goleiro explicitamente, mas não tem chutes, gols nem assists
+                    # Pode ser defensor/volante, mas se não tem chutes e tem xG > 0, 
+                    # é muito provável que seja xG evitado ou erro de dados
+                    # Por segurança, zerar apenas se xG for pequeno (< 0.5) e não tiver posição definida
+                    if not position and xg < 0.5:
+                        xg = 0.0
             
             # Remover timezone da data para Excel
             if hasattr(match_date, 'tz_localize') and match_date.tz is not None:
